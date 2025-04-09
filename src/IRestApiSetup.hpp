@@ -1,10 +1,9 @@
 #pragma once
-
 #include <ESPAsyncWebServer.h>
 
-class IRestApiSetup
-{
-public:
+class IRestApiSetup {
+   public:
     virtual ~IRestApiSetup() = default;
-    virtual void setupRestApi(AsyncWebServer *webserver, const char *url) = 0;
+    
+    virtual void setupRestApi(AsyncWebServer* webserver, const char* url) = 0;
 };

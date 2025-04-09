@@ -1,5 +1,5 @@
 <template>
-    <v-card class=" ma-2 " hover>
+    <v-card class="ma-2" hover>
         <v-card-title>
             Provider
         </v-card-title>
@@ -9,10 +9,10 @@
             <v-text-field label="Port" v-model="modelValue.providerParams.port"></v-text-field>
             <v-text-field label="API Token" v-model="modelValue.providerParams.apiToken" type="password"></v-text-field>
             <v-checkbox label="SSL" v-model="modelValue.providerParams.ssl"></v-checkbox>
+            <v-textarea label="CA-Certificate" v-model="modelValue.providerParams.cert_pem"></v-textarea>
         </v-card-item>
     </v-card>
 </template>
-
 
 <script setup lang="ts">
 import { ref } from 'vue';
@@ -24,6 +24,4 @@ const props = defineProps({
         required: true
     }
 });
-
-
 </script>

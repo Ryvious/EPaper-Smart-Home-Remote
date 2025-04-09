@@ -16,8 +16,6 @@ def setup_web_content():
     subprocess.check_call('npm install', shell=True,cwd='./content')
     subprocess.check_call('npm run build', shell=True,cwd='./content')
 
-
-
     write_cpp_file(target, path)
     write_hpp_file(target, path)
 
@@ -29,17 +27,17 @@ def write_cpp_file(target, path):
 
 class WebContent {
   public:
-    static void setupStaticWebContent(AsyncWebServer *webserver) {
+    static void setupStaticWebContent(AsyncWebServer* webserver) {
         webserver->rewrite("/", "/index.html");
 """
     templateReg = """
-        webserver->on("/{path}", HTTP_GET, [](AsyncWebServerRequest *request){{
+        webserver->on("/{path}", HTTP_GET, [](AsyncWebServerRequest* request){{
             request->send_P(200, F("{mime}"), {arr}, {len});
         }});
 """
     templateGzip = """
-        webserver->on("/{path}", HTTP_GET, [](AsyncWebServerRequest *request){{
-            AsyncWebServerResponse *response = request->beginResponse_P(200, F("{mime}"), {arr}, {len});
+        webserver->on("/{path}", HTTP_GET, [](AsyncWebServerRequest* request){{
+            AsyncWebServerResponse* response = request->beginResponse_P(200, F("{mime}"), {arr}, {len});
             response->addHeader("Content-Encoding", "gzip");
             request->send(response);
         }});

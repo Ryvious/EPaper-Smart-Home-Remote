@@ -3,21 +3,6 @@
     #error "Please enable PSRAM !!!"
 #endif
 
-#define SCREENHEIGHT 960
-#define SCREENWIDTH 540
-
-#define ADC_FILTER_SAMPLE 8
-#define ADC_CHANNEL_BAT ADC1_GPIO35_CHANNEL
-#define BAT_ADC_SCALE 2
-#define BAT_BASE_VOLTAGE 3600
-
-#define uS_TO_S_FACTOR 1000000
-#define TIME_TO_SLEEP 60
-
-#define LGFX_USE_V1
-#define LGFX_M5PAPER
-
-#include <RtcPCF8563.h>
 #include <SPI.h>
 #include <WiFi.h>
 #include <Wire.h>
@@ -26,29 +11,26 @@
 
 #include "IHal.hpp"
 
+#define SCREENHEIGHT 960
+#define SCREENWIDTH 540
+
+#define uS_TO_S_FACTOR 1000000
+#define TIME_TO_SLEEP 60
+
 class HAL : public IHalInterface {
    private:
-    esp_adc_cal_characteristics_t* adcCharacteristics;
-    boolean adcInitialized = false;
-
     lv_color_t displayBuffer[SCREENWIDTH * 10];
     lv_disp_draw_buf_t displayDrawBuffer;
     uint16_t displayFlushState = 0;
     boolean displayReady = false;
-    SemaphoreHandle_t displaySemaphore;
-    uint32_t pxl = 0;
-
-    void beginBatteryADC();
-    uint32_t getBatteryVoltage();
 
    public:
     void init(bool synchronousStart) override;
 
-    uint16_t getBatteryLevel() override;
+    int32_t getBatteryLevel() override;
     tm getTime() override;
     bool isDisplayReady() override { return this->displayReady; }
     bool isNetworkConnected() override { return WiFi.status() == WL_CONNECTED; }
-    bool shouldFactoryReset() override;
     void startSleep() override;
 
    protected:

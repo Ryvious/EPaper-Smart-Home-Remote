@@ -11,6 +11,7 @@ A remote control tailored for Home Assistant, designed for energy-efficient ePap
 - **Cyclic Display Updates**: Automatically refresh the display at defined intervals to ensure up-to-date information.  
 - **Supported Hardware**:  
   - **M5Paper**  
+  - **M5PaperS3**  
   - **LilyGo T5**  
 - **Web Interface**: Configure smart home integration and device settings directly from your browser.  
 - **Debugging Support**: Test and develop with **Sunton S5**.  

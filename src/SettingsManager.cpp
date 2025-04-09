@@ -1,123 +1,101 @@
-
 #include "SettingsManager.hpp"
-#include <model/settings/Settings.hpp>
-#include <Preferences.h>
-#include <ESPAsyncWebServer.h>
+
 #include <ArduinoJson.h>
 #include <AsyncJson.h>
+#include <ESPAsyncWebServer.h>
+#include <Preferences.h>
 
-static const char *TAG = "Settings";
+#include "model/settings/Settings.hpp"
 
-Settings::Settings()
-{
-	esp_log_write(ESP_LOG_DEBUG, TAG, "SETTINGS ENTRY");
+static const char* TAG = "Settings";
+static const char* NVS_KEY = "EPDSH";
+
+SettingsManager::~SettingsManager() {
+    this->preferences.end();
 }
 
-void Settings::begin()
-{
-	preferences.begin("EPDSH", false, "settings");
-	String strSettings = preferences.getString("EPDSH", "");
-	if (strSettings.isEmpty())
-	{
-		ESP_LOGV(TAG, "Load Default settings");
-		loadDefaults();
-	}
-	else
-	{
-		JsonDocument doc;
-		deserializeJson(doc, strSettings, DeserializationOption::NestingLimit(15));
-		this->data = doc.as<settings_t>();
-	}
+void SettingsManager::begin() {
+    preferences.begin(NVS_KEY, false, "settings");
+    String settingsString = preferences.getString(NVS_KEY, "");
+    if (settingsString.isEmpty()) {
+        ESP_LOGW(TAG, "Load Default settings");
+        this->loadDefaults();
+    } else {
+        JsonDocument doc;
+        deserializeJson(doc, settingsString, DeserializationOption::NestingLimit(15));
+        this->settings = doc.as<settings_t>();
+    }
 }
 
-void Settings::loadDefaults()
-{
-	settings_t _settings;
-	_settings.provider = "HA";
+bool SettingsManager::commit() {
+    JsonDocument doc;
+    doc.set(this->settings);
 
-	wifimanager_settings_t wifiSettings;
+    std::string jsonOutput;
+    serializeJson(doc, jsonOutput);
+    ESP_LOGI(TAG, "Serialized Settings: %s", jsonOutput.c_str());
 
-	wifiSettings.ap_ssid = "EPD-SH";
-	wifiSettings.ap_password = "admin";
-	_settings.wifi = wifiSettings;
+    preferences.remove(NVS_KEY);
+    size_t size = preferences.putString(NVS_KEY, jsonOutput.c_str());
+    ESP_LOGV(TAG, "Committed NVS-Size: %d", size);
 
-	webCredentials_t webCred;
-	webCred.password = "admin";
-	webCred.username = "admin";
-	_settings.webLogin = webCred;
-
-	this->data = _settings;
-
-	if (!commit())
-	{
-		esp_log_write(ESP_LOG_ERROR, TAG, "Speichern der Defaultwerte fehlgeschlagen");
-	}
+    return (size != 0);
 }
 
-Settings::~Settings()
-{
-	this->preferences.end();
+void SettingsManager::loadDefaults() {
+    settings_t settings;
+
+    wifimanager_settings_t wifi;
+    settings.wifi = wifi;
+
+    webCredentials_t webLogin;
+    settings.webLogin = webLogin;
+
+    this->setSettings(settings);
 }
 
-bool Settings::commit()
-{
-	JsonDocument doc;
-	settings_t aa = this->data;
-	doc.set(aa);
+void SettingsManager::setupRestApi(AsyncWebServer* webserver, const char* url) {
+    auto createResponse = []() -> AsyncJsonResponse* {
+        auto response = new AsyncJsonResponse(false);
+        response->addHeader("Access-Control-Allow-Origin", "*");
+        return response;
+    };
 
-	std::string jsonOutput;
-	serializeJson(doc, jsonOutput);
-	Serial.println(jsonOutput.c_str());
-	preferences.remove("EPDSH");
-	size_t sz = preferences.putString("EPDSH", jsonOutput.c_str());
-	return (sz == 0);
-}
-
-settings_t Settings::getData()
-{
-	return this->data;
-}
-void Settings::setData(settings_t set)
-{
-	this->data = set;
-	this->commit();
-}
-void Settings::setupRestApi(AsyncWebServer *webserver, const char *url)
-{
-	auto createResponse = []() -> AsyncJsonResponse *
-	{
-		auto response = new AsyncJsonResponse(false);
-		response->addHeader("Access-Control-Allow-Origin", "*");
-		return response;
-	};
-
-	webserver->on(url, HTTP_GET, [this, createResponse](AsyncWebServerRequest *request)
-				  {
+    webserver->on(url, HTTP_GET, [this, createResponse](AsyncWebServerRequest* request) {
         auto response = createResponse();
         JsonObject root = response->getRoot();
-        const settings_t settings = this->getData();
+        const settings_t settings = this->getSettings();
         Converter<settings_t>().toJson(settings, root);
         response->setLength();
-        request->send(response); })
-		.setAuthentication(this->data.webLogin.username.c_str(), this->data.webLogin.password.c_str());
+        request->send(response);
+    }).setAuthentication(this->settings.webLogin.username.c_str(), this->settings.webLogin.password.c_str());
 
-	webserver->on(url, HTTP_OPTIONS, [createResponse](AsyncWebServerRequest *request)
-				  {
+    webserver->on(url, HTTP_OPTIONS, [createResponse](AsyncWebServerRequest* request) {
         auto response = createResponse();
         response->setLength();
-        request->send(response); });
+        request->send(response);
+    });
 
-	AsyncCallbackJsonWebHandler *handler = new AsyncCallbackJsonWebHandler(
-		url, [this](AsyncWebServerRequest *request, JsonVariant &json)
-		{
-            if (!request->authenticate(this->data.webLogin.username.c_str(), this->data.webLogin.password.c_str())) {
-                return request->requestAuthentication();
-            }
-            settings_t settings = json.as<settings_t>();
-			this->setData(settings);
-			request->send(200); 
-			vTaskDelay(200);
-			ESP.restart(); });
+    AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler(url, [this](AsyncWebServerRequest* request, JsonVariant& json) {
+        if (!request->authenticate(this->settings.webLogin.username.c_str(), this->settings.webLogin.password.c_str())) {
+            return request->requestAuthentication();
+        }
 
-	webserver->addHandler(handler);
+        settings_t settings = json.as<settings_t>();
+        this->setSettings(settings);
+        request->send(200);
+        vTaskDelay(200);
+        ESP.restart();
+    });
+
+    webserver->addHandler(handler);
+}
+
+settings_t SettingsManager::getSettings() {
+    return this->settings;
+}
+bool SettingsManager::setSettings(settings_t settings) {
+    this->settings = settings;
+
+    return this->commit();
 }

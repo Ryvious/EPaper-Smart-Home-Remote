@@ -1,86 +1,68 @@
 #pragma once
+#include <ArduinoJson.h>
 
 #include <iostream>
 #include <map>
 #include <vector>
-#include <ArduinoJson.h>
 
+#include "Device.hpp"
+#include "Provider.hpp"
 #include "StlConverter.hpp"
-#include "device.hpp"
 #include "Views.hpp"
 #include "WifiManager.hpp"
-#include "provider.hpp"
 
-struct webCredentials_t
-{
-    std::string username;
-    std::string password;
+struct webCredentials_t {
+    std::string username = "admin";
+    std::string password = "admin";
 };
 
-namespace ArduinoJson
-{
-    template <>
-    struct Converter<webCredentials_t>
-    {
-        static bool toJson(const webCredentials_t &src, JsonVariant dst)
-        {
-
-            dst["username"] = src.username;
-            dst["password"] = src.password;
-
-            return true;
-        }
-
-        static webCredentials_t fromJson(JsonVariantConst src)
-        {
-
-            webCredentials_t _settings;
-            _settings.username = src["username"].as<std::string>();
-            _settings.password = src["password"].as<std::string>();
-            return _settings;
-        }
-
-        static bool checkJson(JsonVariantConst src)
-        {
-            return true;
-            // return src["real"].is<double>() && src["imag"].is<double>();
-        }
-    };
-}
-
-struct settings_t
-{
+struct settings_t {
     std::string provider = "HA";
     std::vector<device_t> devices;
     wifimanager_settings_t wifi;
     provider_settings_t providerParams;
     std::vector<view_t> views;
     webCredentials_t webLogin;
-    std::vector<std::string> getDevicesByView(const std::string &viewname) const
-    {
-        auto it = std::find_if(this->views.begin(), this->views.end(),
-                               [viewname](const view_t &obj)
-                               {
-                                   return obj.name == viewname;
-                               });
 
-        if (it != this->views.end())
-        {
-            const view_t &foundView = *it;
+    std::vector<std::string> getDevicesByView(const std::string& viewname) const {
+        auto it = std::find_if(this->views.begin(), this->views.end(), [viewname](const view_t& obj) {
+            return obj.name == viewname;
+        });
+
+        if (it != this->views.end()) {
+            const view_t& foundView = *it;
+
             return foundView.devices;
         }
+
         return std::vector<std::string>();
     };
 };
 
-namespace ArduinoJson
-{
-    template <>
-    struct Converter<settings_t>
-    {
-        static bool toJson(const settings_t &src, JsonVariant dst)
-        {
+namespace ArduinoJson {
+    template <> struct Converter<webCredentials_t> {
+        static bool toJson(const webCredentials_t& src, JsonVariant dst) {
+            dst["username"] = src.username;
+            dst["password"] = src.password;
 
+            return true;
+        }
+
+        static webCredentials_t fromJson(JsonVariantConst src) {
+            webCredentials_t dst;
+            dst.username = src["username"].as<std::string>();
+            dst.password = src["password"].as<std::string>();
+
+            return dst;
+        }
+
+        static bool checkJson(JsonVariantConst src) {
+            return true;
+        }
+    };
+
+    template <> struct Converter<settings_t> {
+        static bool toJson(const settings_t& src, JsonVariant dst) {
             dst["provider"] = src.provider;
             dst["devices"] = src.devices;
             dst["wifi"] = src.wifi;
@@ -91,23 +73,20 @@ namespace ArduinoJson
             return true;
         }
 
-        static settings_t fromJson(JsonVariantConst src)
-        {
+        static settings_t fromJson(JsonVariantConst src) {
+            settings_t dst;
+            dst.provider = src["provider"].as<std::string>();
+            dst.devices = src["devices"].as<std::vector<device_t>>();
+            dst.wifi = src["wifi"].as<wifimanager_settings_t>();
+            dst.views = src["views"].as<std::vector<view_t>>();
+            dst.providerParams = src["providerParams"].as<provider_settings_t>();
+            dst.webLogin = src["webLogin"].as<webCredentials_t>();
 
-            settings_t _settings;
-            _settings.provider = src["provider"].as<std::string>();
-            _settings.devices = src["devices"].as<std::vector<device_t>>();
-            _settings.wifi = src["wifi"].as<wifimanager_settings_t>();
-            _settings.views = src["views"].as<std::vector<view_t>>();
-            _settings.providerParams = src["providerParams"].as<provider_settings_t>();
-            _settings.webLogin = src["webLogin"].as<webCredentials_t>();
-
-            return _settings;
+            return dst;
         }
 
-        static bool checkJson(JsonVariantConst src)
-        {
+        static bool checkJson(JsonVariantConst src) {
             return true;
         }
     };
-}
+}  // namespace ArduinoJson

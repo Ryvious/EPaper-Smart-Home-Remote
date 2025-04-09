@@ -5,7 +5,7 @@
         </v-card-title>
         <v-card-item>
             <v-text-field label="Username" v-model="modelValue.username"></v-text-field>
-            <v-text-field label=" Passwort" v-model="modelValue.password" type="password"></v-text-field>
+            <v-text-field label="Passwort" v-model="modelValue.password" type="password"></v-text-field>
         </v-card-item>
     </v-card>
 </template>

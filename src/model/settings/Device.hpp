@@ -1,25 +1,20 @@
 #pragma once
-
+#include <ArduinoJson.h>
 #include <esp_wifi_types.h>
+
 #include <iostream>
 #include <map>
 #include <vector>
-#include <ArduinoJson.h>
 
-struct device_t
-{
-    std::string name;
+struct device_t {
     std::string id;
+    std::string name;
     std::string type;
 };
 
-namespace ArduinoJson
-{
-    template <>
-    struct Converter<device_t>
-    {
-        static bool toJson(const device_t &src, JsonVariant dst)
-        {
+namespace ArduinoJson {
+    template <> struct Converter<device_t> {
+        static bool toJson(const device_t& src, JsonVariant dst) {
             dst["name"] = src.name;
             dst["type"] = src.type;
             dst["id"] = src.id;
@@ -27,18 +22,17 @@ namespace ArduinoJson
             return true;
         }
 
-        static device_t fromJson(JsonVariantConst src)
-        {
-            device_t _settings;
-            _settings.name = src["name"].as<std::string>();
-            _settings.type = src["type"].as<std::string>();
-            _settings.id = src["id"].as<std::string>();
-            return _settings;
+        static device_t fromJson(JsonVariantConst src) {
+            device_t dst;
+            dst.name = src["name"].as<std::string>();
+            dst.type = src["type"].as<std::string>();
+            dst.id = src["id"].as<std::string>();
+
+            return dst;
         }
 
-        static bool checkJson(JsonVariantConst src)
-        {
+        static bool checkJson(JsonVariantConst src) {
             return true;
         }
     };
-}
+}  // namespace ArduinoJson

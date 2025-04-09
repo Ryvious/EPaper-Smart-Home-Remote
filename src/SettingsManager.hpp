@@ -1,22 +1,24 @@
-#include <model/settings/Settings.hpp>
-#include <Preferences.h>
-#include <CRC32.h>
+#pragma once
 #include <ESPAsyncWebServer.h>
+#include <Preferences.h>
+
 #include "IRestApiSetup.hpp"
+#include "model/settings/Settings.hpp"
 
-class Settings : public IRestApiSetup
-{
-private:
-    settings_t data;
+class SettingsManager : public IRestApiSetup {
+   private:
     Preferences preferences;
+    settings_t settings;
 
-public:
-    Settings();
-    ~Settings();
-    settings_t getData();
+   public:
+    ~SettingsManager();
+
     void begin();
-    void setData(settings_t set);
-    void loadDefaults();
     bool commit();
-    void setupRestApi(AsyncWebServer *webserver, const char *url) override;
+    void loadDefaults();
+
+    void setupRestApi(AsyncWebServer* webserver, const char* url) override;
+
+    settings_t getSettings();
+    bool setSettings(settings_t settings);
 };

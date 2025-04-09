@@ -1,28 +1,35 @@
-#include "HAL.hpp"
+#include "Hal.hpp"
 
+#include <Arduino.h>
+#include <M5Unified.h>
 #include <WiFi.h>
+#include <esp_timer.h>
+#include <esp_wifi.h>
 #include <lvgl.h>
 
-#include "driver.h"
+#include "driver/adc.h"
+#include "esp_adc_cal.h"
+#include "soc/adc_channel.h"
 
 static const char* TAG = "gui";
 
-LGFX gfx;
+int32_t HAL::getBatteryLevel() {
+    auto level = M5.Power.getBatteryLevel();
+    ESP_LOGV(TAG, "Battery level: %u", level);
+
+    return level;
+}
 
 tm HAL::getTime() {
-    tm time;
-    time.tm_min = 37;
-    time.tm_hour = 13;
-    return time;
+    return M5.Rtc.getDateTime().get_tm();
 }
 
 void HAL::init(bool synchronousStart) {
+    m5::M5Unified::config_t cfg;
+    cfg.clear_display = !synchronousStart;
+    M5.begin(cfg);
+
     lv_init();
-
-    gfx.begin();
-    gfx.setBrightness(255);
-    gfx.setRotation(1);
-
     lv_disp_draw_buf_init(&this->displayDrawBuffer, this->displayBuffer, NULL, SCREENWIDTH * 10);
 
     static lv_disp_drv_t disp_drv;
@@ -48,29 +55,37 @@ void HAL::init(bool synchronousStart) {
 
 void HAL::flushDisplay(lv_disp_drv_t* disp, const lv_area_t* area, lv_color_t* color_p) {
     if (this->displayFlushState == 0) {
-        gfx.startWrite();
         this->displayFlushState = 1;
+        M5.Display.startWrite();
     }
 
-    gfx.pushImage(area->x1, area->y1, area->x2 - area->x1 + 1, area->y2 - area->y1 + 1, (lgfx::rgb565_t*)&color_p->full);
+    for (auto y = area->y1; y <= area->y2; y++) {
+        for (auto x = area->x1; x <= area->x2; x++) {
+            auto col = lv_color_to16(*color_p);
+            M5.Display.drawPixel(x, y, col);
+            color_p++;
+        }
+    }
+
     if (lv_disp_flush_is_last(disp)) {
-        gfx.endWrite();
+        M5.Display.endWrite();
         this->displayFlushState = 0;
+        this->displayReady = true;
     }
 
     lv_disp_flush_ready(disp);
 }
 
 void HAL::readTouchScreen(lv_indev_drv_t* drv, lv_indev_data_t* data) {
-    data->state = LV_INDEV_STATE_REL;
-
-    uint16_t touchX, touchY;
-    if (gfx.getTouch(&touchX, &touchY)) {
-        lv_disp_enable_invalidation(NULL, true);
-
-        data->state = LV_INDEV_STATE_PR;
-        data->point.x = touchX;
-        data->point.y = touchY;
+    M5.update();
+    auto count = M5.Touch.getCount();
+    if (count == 0) {
+        data->state = LV_INDEV_STATE_RELEASED;
+    } else {
+        auto touch = M5.Touch.getDetail(0);
+        data->state = LV_INDEV_STATE_PRESSED;
+        data->point.x = touch.x;
+        data->point.y = touch.y;
 
         TaskHandle_t taskHandle = xTaskGetHandle("pwrMngmntTask");
         if (taskHandle != nullptr) {
@@ -80,6 +95,5 @@ void HAL::readTouchScreen(lv_indev_drv_t* drv, lv_indev_data_t* data) {
 }
 
 void HAL::startSleep() {
-    esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-    esp_deep_sleep_start();
+    M5.Power.deepSleep(TIME_TO_SLEEP * uS_TO_S_FACTOR);
 }
