@@ -48,7 +48,7 @@ static lv_obj_t* tile_fragment_create_obj(lv_fragment_t* self, lv_obj_t* parent)
     PubSub<DeviceCommand>* pubSub = fragment->commandPubSub;
 
     for (std::string dev : fragment->viewData->devices) {
-        IoTDevice* dev1 = (IoTDevice*)store->getDevice(dev);
+        IoTDevice* dev1 = store->getDevice(dev);
         if (dev1 != nullptr) {
             TileButton* btn;
             if (ColorLight* d = dynamic_cast<ColorLight*>(dev1); d != nullptr) {
@@ -78,4 +78,5 @@ static lv_obj_t* tile_fragment_create_obj(lv_fragment_t* self, lv_obj_t* parent)
 lv_fragment_class_t tile_cls = {
     .constructor_cb = tile_fragment_ctor,
     .create_obj_cb = tile_fragment_create_obj,
-    .instance_size = sizeof(tile_fragment_t)};
+    .instance_size = sizeof(tile_fragment_t)
+};

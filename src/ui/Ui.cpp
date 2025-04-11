@@ -27,8 +27,8 @@ void UI::draw(std::string viewname, bool blocking) {
     lv_obj_set_size(this->root, LV_PCT(100), LV_PCT(100));
     lv_obj_set_layout(this->root, LV_LAYOUT_GRID);
 
-    static const lv_coord_t col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static const lv_coord_t row_dsc[] = {LV_GRID_FR(1), LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+    static const lv_coord_t col_dsc[] = { LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST };
+    static const lv_coord_t row_dsc[] = { LV_GRID_FR(1), LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST };
     lv_obj_set_grid_dsc_array(this->root, col_dsc, row_dsc);
 
     this->container = lv_obj_create(this->root);
@@ -48,10 +48,10 @@ void UI::draw(std::string viewname, bool blocking) {
 
     this->statusbar = new Statusbar(this->hal, this->root);
 
-    if (!viewname.empty()) {
-        this->namedView(viewname);
-    } else {
+    if (viewname.empty()) {
         this->handleMenuClick();
+    } else {
+        this->namedView(viewname);
     }
 
     if (blocking) {
@@ -60,14 +60,12 @@ void UI::draw(std::string viewname, bool blocking) {
             vTaskDelay(50);
         }
     } else {
-        auto lvglTaskLambda = [](void* pvParameters) {
+        BaseType_t uiTask = xTaskCreatePinnedToCore([](void* pvParameters) {
             auto instance = static_cast<UI*>(pvParameters);
             for (;;) {
                 instance->handle();
             }
-        };
-
-        BaseType_t uiTask = xTaskCreatePinnedToCore(lvglTaskLambda, "UITask", 8000, this, 4, NULL, 1);
+        }, "UITask", 8000, this, 4, NULL, APP_CPU_NUM);
     }
 }
 
@@ -82,13 +80,14 @@ void UI::handle() {
 }
 
 void UI::handleMenuClick() {
-    auto lambda = [this](std::string arg) {
+    auto callback = [this](std::string arg) {
         this->namedView(arg);
     };
 
-    menu_fragment_args_t args{
+    menu_fragment_args_t args = {
         .views = &this->views,
-        .callback = lambda};
+        .callback = callback
+    };
     lv_fragment_t* fragment = lv_fragment_create(&menu_cls, &args);
     this->pushFragment(fragment);
 }
@@ -107,10 +106,11 @@ void UI::namedView(std::string viewname) {
             this->stateChangeCallback(viewname);
         }
 
-        tile_fragment_args_t args{
+        tile_fragment_args_t args = {
             .viewPtr = &*it,
             .store = this->deviceStore,
-            .commandPubSub = this->commandPubSub};
+            .commandPubSub = this->commandPubSub
+        };
         lv_fragment_t* fragment = lv_fragment_create(&tile_cls, &args);
         this->pushFragment(fragment);
     } else {

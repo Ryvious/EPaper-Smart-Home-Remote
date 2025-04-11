@@ -11,7 +11,7 @@
 #include "esp_adc_cal.h"
 #include "soc/adc_channel.h"
 
-static const char* TAG = "gui";
+static const char* TAG = "HAL";
 
 LGFX gfx;
 RtcPCF8563<TwoWire> rtc(Wire);

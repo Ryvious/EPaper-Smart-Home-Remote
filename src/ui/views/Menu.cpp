@@ -37,25 +37,25 @@ static lv_obj_t* menu_fragment_create_obj(lv_fragment_t* self, lv_obj_t* parent)
     lv_obj_set_style_pad_column(content, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     for (view_t view : *fragment->views) {
-        lv_obj_t* main_label = lv_label_create(content);
-        lv_label_set_text(main_label, view.name.c_str());
+        lv_obj_t* view_label = lv_label_create(content);
+        lv_label_set_text(view_label, view.name.c_str());
 
-        lv_obj_set_style_text_font(main_label, &lv_font_montserrat_44, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_width(main_label, lv_pct(100));
-        lv_obj_set_style_text_align(main_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_align(main_label, LV_ALIGN_CENTER, 0, 0);
-        lv_obj_add_flag(main_label, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_style_text_font(view_label, &lv_font_montserrat_44, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_width(view_label, lv_pct(100));
+        lv_obj_set_style_text_align(view_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_align(view_label, LV_ALIGN_CENTER, 0, 0);
+        lv_obj_add_flag(view_label, LV_OBJ_FLAG_CLICKABLE);
 
-        lv_obj_add_event_cb(main_label, [](lv_event_t* e) {
-            menu_fragment_t *fragment = (menu_fragment_t *)lv_event_get_user_data(e);
-            fragment->callback(lv_label_get_text(e->target));
+        lv_obj_add_event_cb(view_label, [](lv_event_t* e) {
+            static_cast<menu_fragment_t*>(lv_event_get_user_data(e))->callback(lv_label_get_text(e->target));
         }, LV_EVENT_CLICKED, fragment);
     }
-    
+
     return content;
 };
 
 lv_fragment_class_t menu_cls = {
     .constructor_cb = menu_fragment_ctor,
     .create_obj_cb = menu_fragment_create_obj,
-    .instance_size = sizeof(menu_fragment_t)};
+    .instance_size = sizeof(menu_fragment_t)
+};

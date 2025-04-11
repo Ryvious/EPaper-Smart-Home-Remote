@@ -35,7 +35,7 @@ class Provider {
             }
         };
 
-        BaseType_t _networkTask = xTaskCreatePinnedToCore(networkTaskLambda, "networkTask", 10000, this, 1, NULL, 0);
+        BaseType_t _networkTask = xTaskCreatePinnedToCore(networkTaskLambda, "networkTask", 10000, this, 1, NULL, PRO_CPU_NUM);
         if (_networkTask != pdPASS) {
             return false;
         }

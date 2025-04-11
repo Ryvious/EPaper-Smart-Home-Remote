@@ -11,7 +11,7 @@
 #include "esp_adc_cal.h"
 #include "soc/adc_channel.h"
 
-static const char* TAG = "gui";
+static const char* TAG = "HAL";
 
 int32_t HAL::getBatteryLevel() {
     auto level = M5.Power.getBatteryLevel();
@@ -95,5 +95,5 @@ void HAL::readTouchScreen(lv_indev_drv_t* drv, lv_indev_data_t* data) {
 }
 
 void HAL::startSleep() {
-    M5.Power.deepSleep(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    M5.Power.deepSleep(TIME_TO_SLEEP * uS_TO_S_FACTOR, true);
 }

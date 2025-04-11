@@ -8,38 +8,63 @@
 #include "model/settings/Settings.hpp"
 
 static const char* TAG = "Settings";
-static const char* NVS_KEY = "EPDSH";
 
 SettingsManager::~SettingsManager() {
     this->preferences.end();
 }
 
 void SettingsManager::begin() {
-    preferences.begin(NVS_KEY, false, "settings");
-    String settingsString = preferences.getString(NVS_KEY, "");
-    if (settingsString.isEmpty()) {
-        ESP_LOGW(TAG, "Load Default settings");
-        this->loadDefaults();
-    } else {
+    preferences.begin("EPDSH", false, "settings");
+
+    auto chunks = preferences.getInt("chunks", 0);
+    if (chunks > 0) {
+        String settingsString = "";
+        for (int c = 0; c < chunks; c++) {
+            settingsString += preferences.getString(String(c).c_str(), "");
+        }
+
         JsonDocument doc;
-        deserializeJson(doc, settingsString, DeserializationOption::NestingLimit(15));
-        this->settings = doc.as<settings_t>();
+        if (!deserializeJson(doc, settingsString, DeserializationOption::NestingLimit(15))) {
+            this->settings = doc.as<settings_t>();
+            return;
+        }
     }
+
+    ESP_LOGW(TAG, "Load default settings");
+    this->loadDefaults();
 }
 
 bool SettingsManager::commit() {
     JsonDocument doc;
     doc.set(this->settings);
 
-    std::string jsonOutput;
+    String jsonOutput;
     serializeJson(doc, jsonOutput);
-    ESP_LOGI(TAG, "Serialized Settings: %s", jsonOutput.c_str());
+    int length = jsonOutput.length();
+    if (length <= 0) {
+        return false;
+    }
 
-    preferences.remove(NVS_KEY);
-    size_t size = preferences.putString(NVS_KEY, jsonOutput.c_str());
-    ESP_LOGV(TAG, "Committed NVS-Size: %d", size);
+    preferences.clear();
 
-    return (size != 0);
+    int chunks = 0;
+    do {
+        auto beginIndex = chunks * MAX_NVS_CHUNK_SIZE, endIndex = beginIndex + min(length, MAX_NVS_CHUNK_SIZE);
+        auto chunk = jsonOutput.substring(beginIndex, endIndex);
+        auto size = preferences.putString(String(chunks).c_str(), chunk.c_str());
+        if (size == 0) {
+            ESP_LOGE(TAG, "Commiting NVS chunk %d failed", chunks);
+            return false;
+        }
+
+        ESP_LOGV(TAG, "Committed NVS chunk %d of length %d: %s", chunks, size, chunk.c_str());
+        length -= size;
+        chunks++;
+    } while (length > 0);
+
+    preferences.putInt("chunks", chunks);
+
+    return chunks > 0;
 }
 
 void SettingsManager::loadDefaults() {
@@ -84,7 +109,7 @@ void SettingsManager::setupRestApi(AsyncWebServer* webserver, const char* url) {
         settings_t settings = json.as<settings_t>();
         this->setSettings(settings);
         request->send(200);
-        vTaskDelay(200);
+        vTaskDelay(500);
         ESP.restart();
     });
 

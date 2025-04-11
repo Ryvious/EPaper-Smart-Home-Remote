@@ -16,6 +16,8 @@
 #include "WifiManager.hpp"
 #include "ui/Ui.hpp"
 
+static const auto TAG = "MAIN";
+
 HAL hal;
 AppState appState;
 settings_t settings;
@@ -37,9 +39,11 @@ void setupUserInterface(const settings_t& settings, bool drawOnce);
 void setup(void) {
     Serial.begin(115200);
     Serial.setDebugOutput(true);
-    esp_log_level_set("*", ESP_LOG_VERBOSE);
 
+    esp_log_level_set("*", ESP_LOG_VERBOSE);
+    ESP_LOGI(TAG, ">>> Booting @%dMHz with reason %d ===", F_CPU / 1000L / 1000L, appState.getWakeupReason());
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
     bool synchronousStart = appState.isWakeupReason(ESP_SLEEP_WAKEUP_TIMER);
 
     settingsManager.begin();

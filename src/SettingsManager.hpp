@@ -5,6 +5,8 @@
 #include "IRestApiSetup.hpp"
 #include "model/settings/Settings.hpp"
 
+#define MAX_NVS_CHUNK_SIZE 3500
+
 class SettingsManager : public IRestApiSetup {
    private:
     Preferences preferences;

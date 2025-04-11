@@ -96,7 +96,7 @@ bool WiFiManager::begin(bool blocking) {
             instance->handle();
         }
     };
-    BaseType_t testTask = xTaskCreatePinnedToCore(wifiTaskLambda, "wifiTask", 2000, this, 10, NULL, 0);
+    BaseType_t testTask = xTaskCreatePinnedToCore(wifiTaskLambda, "wifiTask", 2000, this, 10, NULL, PRO_CPU_NUM);
 
     if (blocking) {
         if (WiFi.waitForConnectResult() != WL_CONNECTED) {

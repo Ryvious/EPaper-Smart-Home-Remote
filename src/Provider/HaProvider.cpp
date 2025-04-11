@@ -3,8 +3,6 @@
 #include <ArduinoJson.h>
 #include <esp_websocket_client.h>
 
-#include <ca_cert.hpp>
-
 #include "../PubSub.hpp"
 #include "HaModel.hpp"
 #include "IoTDevs.hpp"
@@ -13,7 +11,8 @@ static const char* TAG = "HAProvider";
 
 using namespace std::placeholders;
 
-HaProvider::HaProvider(DeviceStore* store, provider_settings_t settings, PubSub<DeviceCommand>* commandPubSub) : Provider(store, settings, commandPubSub) {
+HaProvider::HaProvider(DeviceStore* store, provider_settings_t settings, PubSub<DeviceCommand>* commandPubSub)
+    : Provider(store, settings, commandPubSub) {
     ESP_LOGI(TAG, "Create HA Provider");
     this->isOnline = false;
     this->messageId = 1;
@@ -22,10 +21,11 @@ HaProvider::HaProvider(DeviceStore* store, provider_settings_t settings, PubSub<
         .host = this->settings.host.c_str(),
         .port = this->settings.port,
         .path = "/api/websocket",
-        .buffer_size = 2048};
+        .buffer_size = 2048
+    };
 
     if (this->settings.ssl) {
-        websocket_cfg.cert_pem = cert_pem;
+        websocket_cfg.cert_pem = this->settings.cert_pem.c_str();
         websocket_cfg.transport = WEBSOCKET_TRANSPORT_OVER_SSL;
         websocket_cfg.skip_cert_common_name_check = true;
     }
@@ -109,7 +109,7 @@ void HaProvider::handleWebsocketEvent(esp_event_base_t base, int32_t event_id, v
         if (strcmp("auth_ok", type) == 0) {
             this->subscribeEntities();
         } else if (strcmp("event", type) == 0) {
-            std::vector<EntityState> states = this->deserializationBuffer["event"].as<std::vector<EntityState>>();
+            auto states = this->deserializationBuffer["event"].as<std::vector<EntityState>>();
             for (EntityState state : states) {
                 this->event(this->store->getDevice(state.id), state);
             }
@@ -148,7 +148,7 @@ template <> void HaProvider::event<Light>(Light* obj, EntityState data) {
 
 template <> void HaProvider::event<DimmLight>(DimmLight* obj, EntityState data) {
     if (int brightness; data.getIntAttribute("brightness", &brightness)) {
-        obj->brightness = brightness / 2.55;  // Attribute in HA 0-255
+        obj->brightness = brightness / 2.55; // Attribute in HA 0-255
     }
     if (!data.state.empty()) {
         this->store->setState(obj, data.boolState());
@@ -184,7 +184,6 @@ template <> void HaProvider::event<Shutter>(Shutter* obj, EntityState data) {
 
     this->store->notifyObservers(*obj);
 }
-
 
 template <> void HaProvider::process<Light>(Light* obj, DeviceCommand cmd) {
     auto action = static_cast<Light::supportedActions>(cmd.action);

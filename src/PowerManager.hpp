@@ -1,13 +1,16 @@
 #include <functional>
 
 class PowerManager {
-   public:
+private:
+    int sleepTimer = 60;
+    std::function<void()> shutdownCallback;
+
+public:
     PowerManager(std::function<void()> shutdownCallback)
         : shutdownCallback(shutdownCallback) {
-        BaseType_t createTask = xTaskCreatePinnedToCore([](void *pvParameters) {
-            PowerManager *powerManager = static_cast<PowerManager *>(pvParameters);
-            powerManager->pwrMngmntTask();
-        }, "pwrMngmntTask", 4000, (void *)this, 10, NULL, 0);
+        BaseType_t createTask = xTaskCreatePinnedToCore([](void* pvParameters) {
+            static_cast<PowerManager*>(pvParameters)->pwrMngmntTask();
+        }, "pwrMngmntTask", 4000, (void*)this, 10, NULL, PRO_CPU_NUM);
 
         if (createTask != pdPASS) {
             uint32_t heap = esp_get_free_heap_size();
@@ -15,17 +18,7 @@ class PowerManager {
         }
     }
 
-    static void initSleep() {
-        ESP_LOGE("BOOT", "INIT SLEEP");
-        TaskHandle_t taskHandle = xTaskGetHandle("pwrMngmntTask");
-        if (taskHandle != nullptr)
-            xTaskNotify(taskHandle, 2, eSetValueWithOverwrite);
-    }
-
-   private:
-    int sleepTimer = 60;
-    std::function<void()> shutdownCallback;
-
+private:
     void pwrMngmntTask() {
         uint32_t ulNotificationValue = 0;
         for (;;) {

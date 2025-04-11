@@ -11,7 +11,7 @@
 using StateChangeCallback = std::function<void(const std::string&)>;
 
 class UI {
-   private:
+private:
     int clientId;
     lv_obj_t* container;
     lv_obj_t* label;
@@ -26,14 +26,14 @@ class UI {
     StateChangeCallback stateChangeCallback;
     Statusbar* statusbar;
 
-   public:
+public:
     void begin(std::vector<view_t> views, DeviceStore* store, PubSub<DeviceStatus>* statusPubSub, PubSub<DeviceCommand>* commandPubSub, IHalInterface* hal);
 
     void draw(std::string viewname, bool blocking = false);
 
     void setStateChangeCallback(StateChangeCallback stateChangeCallback);
 
-   private:
+private:
     void handle();
 
     void handleMenuClick();

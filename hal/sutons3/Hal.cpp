@@ -5,7 +5,7 @@
 
 #include "driver.h"
 
-static const char* TAG = "gui";
+static const char* TAG = "HAL";
 
 LGFX gfx;
 
